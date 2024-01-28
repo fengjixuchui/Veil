@@ -1,35 +1,12 @@
 /*
  * PROJECT:   Veil
- * FILE:      Veil.h
- * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
- *            samlib.dll and winsta.dll
+ * FILE:      Veil.System.Win32.h
+ * PURPOSE:   This file is part of Veil.
  *
- * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
+ * LICENSE:   MIT License
  *
- * DEVELOPER: MiroKaku (50670906+MiroKaku@users.noreply.github.com)
+ * DEVELOPER: MiroKaku (kkmi04@outlook.com)
  */
-
- /*
-  * PROJECT:   Mouri's Internal NT API Collections (MINT)
-  * FILE:      MINT.h
-  * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
-  *            samlib.dll and winsta.dll
-  *
-  * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
-  *
-  * DEVELOPER: Mouri_Naruto (Mouri_Naruto AT Outlook.com)
-  */
-
-  /*
-   * This file is part of the Process Hacker project - https://processhacker.sf.io/
-   *
-   * You can redistribute this file and/or modify it under the terms of the
-   * Attribution 4.0 International (CC BY 4.0) license.
-   *
-   * You must give appropriate credit, provide a link to the license, and
-   * indicate if changes were made. You may do so in any reasonable manner, but
-   * not in any way that suggests the licensor endorses you or your use.
-   */
 
 #pragma once
 
@@ -164,7 +141,7 @@ typedef const LARGE_UNICODE_STRING* PCLARGE_UNICODE_STRING;
 
 // Win32k
 
-#if defined(_KERNEL_MODE)
+#if defined(_KERNEL_MODE) && !defined(_WINDOWS_)
 
 typedef LRESULT(CALLBACK* WNDPROC)(HWND, UINT, WPARAM, LPARAM);
 
@@ -413,7 +390,7 @@ NtUserGetAtomName(
     _Inout_ PUNICODE_STRING AtomName
 );
 
-#if defined(_KERNEL_MODE)
+#if defined(_KERNEL_MODE) && !defined(_WINDOWS_)
 typedef struct tagPAINTSTRUCT {
     HDC         hdc;
     BOOL        fErase;
@@ -440,7 +417,7 @@ NtUserEndPaint(
     _In_  const PAINTSTRUCT* Paint
 );
 
-#if defined(_KERNEL_MODE)
+#if defined(_KERNEL_MODE) && !defined(_WINDOWS_)
 typedef struct tagRAWINPUTDEVICELIST
 {
     HANDLE hDevice;
@@ -463,7 +440,7 @@ UINT NTAPI NtUserGetRawInputDeviceInfo(
     _Inout_ PUINT Size
 );
 
-#if defined(_KERNEL_MODE)
+#if defined(_KERNEL_MODE) && !defined(_WINDOWS_)
 typedef struct tagRAWINPUTDEVICE
 {
     USHORT usUsagePage; // Toplevel collection UsagePage

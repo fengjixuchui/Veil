@@ -1,34 +1,11 @@
 /*
  * PROJECT:   Veil
- * FILE:      Veil.h
- * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
- *            samlib.dll and winsta.dll
+ * FILE:      Veil.System.KernelCore.h
+ * PURPOSE:   This file is part of Veil.
  *
- * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
+ * LICENSE:   MIT License
  *
- * DEVELOPER: MiroKaku (50670906+MiroKaku@users.noreply.github.com)
- */
-
-/*
- * PROJECT:   Mouri's Internal NT API Collections (MINT)
- * FILE:      MINT.h
- * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
- *            samlib.dll and winsta.dll
- *
- * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
- *
- * DEVELOPER: Mouri_Naruto (Mouri_Naruto AT Outlook.com)
- */
-
-/*
- * This file is part of the Process Hacker project - https://processhacker.sf.io/
- *
- * You can redistribute this file and/or modify it under the terms of the
- * Attribution 4.0 International (CC BY 4.0) license.
- *
- * You must give appropriate credit, provide a link to the license, and
- * indicate if changes were made. You may do so in any reasonable manner, but
- * not in any way that suggests the licensor endorses you or your use.
+ * DEVELOPER: MiroKaku (kkmi04@outlook.com)
  */
 
 #pragma once
@@ -211,9 +188,8 @@ ZwCallbackReturn(
     _In_ NTSTATUS Status
 );
 
-#if (NTDDI_VERSION >= NTDDI_VISTA)
 __kernel_entry NTSYSCALLAPI
-VOID
+NTSTATUS
 NTAPI
 NtFlushProcessWriteBuffers(
     VOID
@@ -221,12 +197,11 @@ NtFlushProcessWriteBuffers(
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSYSAPI
-VOID
+NTSTATUS
 NTAPI
 ZwFlushProcessWriteBuffers(
     VOID
 );
-#endif
 
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
@@ -272,41 +247,25 @@ typedef enum _KAPC_ENVIRONMENT
     InsertApcEnvironment
 } KAPC_ENVIRONMENT;
 
-typedef
-VOID
-(*PKNORMAL_ROUTINE) (
-    IN PVOID NormalContext,
-    IN PVOID SystemArgument1,
-    IN PVOID SystemArgument2
+typedef VOID (*PKNORMAL_ROUTINE) (
+    _In_ PVOID NormalContext,
+    _In_ PVOID SystemArgument1,
+    _In_ PVOID SystemArgument2
     );
 
-typedef
-VOID
-(*PKKERNEL_ROUTINE) (
-    IN struct _KAPC* Apc,
-    IN OUT PKNORMAL_ROUTINE* NormalRoutine,
-    IN OUT PVOID* NormalContext,
-    IN OUT PVOID* SystemArgument1,
-    IN OUT PVOID* SystemArgument2
+typedef VOID (*PKKERNEL_ROUTINE) (
+    _In_ struct _KAPC* Apc,
+    _Inout_ PKNORMAL_ROUTINE* NormalRoutine,
+    _Inout_ PVOID* NormalContext,
+    _Inout_ PVOID* SystemArgument1,
+    _Inout_ PVOID* SystemArgument2
     );
 
-typedef
-VOID
-(*PKRUNDOWN_ROUTINE) (
-    IN struct _KAPC* Apc
+typedef VOID (*PKRUNDOWN_ROUTINE) (
+    _In_ struct _KAPC* Apc
     );
 
-typedef
-BOOLEAN
-(*PKSYNCHRONIZE_ROUTINE) (
-    IN PVOID SynchronizeContext
-    );
-
-typedef
-BOOLEAN
-(*PKTRANSFER_ROUTINE) (
-    VOID
-    );
+typedef BOOLEAN (*PKTRANSFER_ROUTINE)(VOID);
 
 NTSYSAPI
 VOID

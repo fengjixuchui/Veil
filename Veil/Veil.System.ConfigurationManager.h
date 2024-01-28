@@ -1,34 +1,11 @@
 /*
  * PROJECT:   Veil
- * FILE:      Veil.h
- * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
- *            samlib.dll and winsta.dll
+ * FILE:      Veil.System.ConfigurationManager.h
+ * PURPOSE:   This file is part of Veil.
  *
- * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
+ * LICENSE:   MIT License
  *
- * DEVELOPER: MiroKaku (50670906+MiroKaku@users.noreply.github.com)
- */
-
-/*
- * PROJECT:   Mouri's Internal NT API Collections (MINT)
- * FILE:      MINT.h
- * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
- *            samlib.dll and winsta.dll
- *
- * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
- *
- * DEVELOPER: Mouri_Naruto (Mouri_Naruto AT Outlook.com)
- */
-
-/*
- * This file is part of the Process Hacker project - https://processhacker.sf.io/
- *
- * You can redistribute this file and/or modify it under the terms of the
- * Attribution 4.0 International (CC BY 4.0) license.
- *
- * You must give appropriate credit, provide a link to the license, and
- * indicate if changes were made. You may do so in any reasonable manner, but
- * not in any way that suggests the licensor endorses you or your use.
+ * DEVELOPER: MiroKaku (kkmi04@outlook.com)
  */
 
 #pragma once
@@ -78,7 +55,7 @@ typedef struct _KEY_BASIC_INFORMATION
     LARGE_INTEGER LastWriteTime;
     ULONG TitleIndex;
     ULONG NameLength;
-    WCHAR Name[1];
+    _Field_size_bytes_(NameLength) WCHAR Name[1];
 } KEY_BASIC_INFORMATION, * PKEY_BASIC_INFORMATION;
 
 typedef struct _KEY_NODE_INFORMATION
@@ -88,30 +65,30 @@ typedef struct _KEY_NODE_INFORMATION
     ULONG ClassOffset;
     ULONG ClassLength;
     ULONG NameLength;
-    WCHAR Name[1];
+    _Field_size_bytes_(NameLength) WCHAR Name[1];
     // ...
-    // WCHAR Class[1];
+    // _Field_size_bytes_(ClassLength) WCHAR Class[1];
 } KEY_NODE_INFORMATION, * PKEY_NODE_INFORMATION;
 
 typedef struct _KEY_FULL_INFORMATION
 {
     LARGE_INTEGER LastWriteTime;
-    ULONG TitleIndex;
-    ULONG ClassOffset;
-    ULONG ClassLength;
-    ULONG SubKeys;
-    ULONG MaxNameLen;
-    ULONG MaxClassLen;
-    ULONG Values;
-    ULONG MaxValueNameLen;
-    ULONG MaxValueDataLen;
-    WCHAR Class[1];
+    ULONG   TitleIndex;
+    ULONG   ClassOffset;
+    ULONG   ClassLength;
+    ULONG   SubKeys;
+    ULONG   MaxNameLen;
+    ULONG   MaxClassLen;
+    ULONG   Values;
+    ULONG   MaxValueNameLen;
+    ULONG   MaxValueDataLen;
+    _Field_size_bytes_(ClassLength) WCHAR   Class[1];           // Variable length
 } KEY_FULL_INFORMATION, * PKEY_FULL_INFORMATION;
 
 typedef struct _KEY_NAME_INFORMATION
 {
     ULONG NameLength;
-    WCHAR Name[1];
+    _Field_size_bytes_(NameLength) WCHAR Name[1];
 } KEY_NAME_INFORMATION, * PKEY_NAME_INFORMATION;
 
 typedef struct _KEY_CACHED_INFORMATION
@@ -124,7 +101,7 @@ typedef struct _KEY_CACHED_INFORMATION
     ULONG MaxValueNameLen;
     ULONG MaxValueDataLen;
     ULONG NameLength;
-    WCHAR Name[1];
+    _Field_size_bytes_(NameLength) WCHAR Name[1];
 } KEY_CACHED_INFORMATION, * PKEY_CACHED_INFORMATION;
 #endif //!_KERNEL_MODE
 
@@ -276,24 +253,37 @@ typedef struct _KEY_VALUE_LAYER_INFORMATION
 } KEY_VALUE_LAYER_INFORMATION, * PKEY_VALUE_LAYER_INFORMATION;
 #endif //!_KERNEL_MODE
 
-// rev
-typedef enum _KEY_LOAD_ENTRY_TYPE
+// private
+typedef enum _CM_EXTENDED_PARAMETER_TYPE
 {
-    KeyLoadTrustClassKey = 1,
-    KeyLoadEvent,
-    KeyLoadToken
-} KEY_LOAD_ENTRY_TYPE;
+    CmExtendedParameterInvalidType,
+    CmExtendedParameterTrustClassKey,
+    CmExtendedParameterEvent,
+    CmExtendedParameterFileAccessToken,
+    CmExtendedParameterMax,
+} CM_EXTENDED_PARAMETER_TYPE;
 
-// rev
-typedef struct _KEY_LOAD_ENTRY
+#define CM_EXTENDED_PARAMETER_TYPE_BITS 8
+
+// private
+typedef struct DECLSPEC_ALIGN(8) _CM_EXTENDED_PARAMETER
 {
-    KEY_LOAD_ENTRY_TYPE EntryType;
+    struct
+    {
+        ULONG64 Type : CM_EXTENDED_PARAMETER_TYPE_BITS;
+        ULONG64 Reserved : 64 - CM_EXTENDED_PARAMETER_TYPE_BITS;
+    };
+
     union
     {
+        ULONG64 ULong64;
+        PVOID Pointer;
+        SIZE_T Size;
         HANDLE Handle;
-        ULONG_PTR Value;
+        ULONG ULong;
+        ACCESS_MASK AccessMask;
     };
-} KEY_LOAD_ENTRY, * PKEY_LOAD_ENTRY;
+} CM_EXTENDED_PARAMETER, * PCM_EXTENDED_PARAMETER;
 
 #ifndef _KERNEL_MODE
 typedef struct _KEY_VALUE_ENTRY
@@ -317,7 +307,7 @@ typedef struct _REG_NOTIFY_INFORMATION
     ULONG NextEntryOffset;
     REG_ACTION Action;
     ULONG KeyLength;
-    WCHAR Key[1];
+    _Field_size_bytes_(KeyLength) WCHAR Key[1];
 } REG_NOTIFY_INFORMATION, * PREG_NOTIFY_INFORMATION;
 
 typedef struct _KEY_PID_ARRAY
@@ -331,6 +321,142 @@ typedef struct _KEY_OPEN_SUBKEYS_INFORMATION
     ULONG Count;
     KEY_PID_ARRAY KeyArray[1];
 } KEY_OPEN_SUBKEYS_INFORMATION, * PKEY_OPEN_SUBKEYS_INFORMATION;
+
+// Differencing registry & virtualization // since REDSTONE
+
+// rev
+#define VR_DEVICE_NAME L"\\Device\\VRegDriver"
+
+// rev
+#define IOCTL_VR_INITIALIZE_JOB_FOR_VREG            CTL_CODE(FILE_DEVICE_UNKNOWN, 1, METHOD_BUFFERED, FILE_ANY_ACCESS) // in: VR_INITIALIZE_JOB_FOR_VREG
+#define IOCTL_VR_LOAD_DIFFERENCING_HIVE             CTL_CODE(FILE_DEVICE_UNKNOWN, 2, METHOD_BUFFERED, FILE_ANY_ACCESS) // in: VR_LOAD_DIFFERENCING_HIVE
+#define IOCTL_VR_CREATE_NAMESPACE_NODE              CTL_CODE(FILE_DEVICE_UNKNOWN, 3, METHOD_BUFFERED, FILE_ANY_ACCESS) // in: VR_CREATE_NAMESPACE_NODE
+#define IOCTL_VR_MODIFY_FLAGS                       CTL_CODE(FILE_DEVICE_UNKNOWN, 4, METHOD_BUFFERED, FILE_ANY_ACCESS) // in: VR_MODIFY_FLAGS
+#define IOCTL_VR_CREATE_MULTIPLE_NAMESPACE_NODES    CTL_CODE(FILE_DEVICE_UNKNOWN, 5, METHOD_BUFFERED, FILE_ANY_ACCESS) // in: VR_CREATE_MULTIPLE_NAMESPACE_NODES
+#define IOCTL_VR_UNLOAD_DYNAMICALLY_LOADED_HIVES    CTL_CODE(FILE_DEVICE_UNKNOWN, 6, METHOD_BUFFERED, FILE_ANY_ACCESS) // in: VR_UNLOAD_DYNAMICALLY_LOADED_HIVES
+#define IOCTL_VR_GET_VIRTUAL_ROOT_KEY               CTL_CODE(FILE_DEVICE_UNKNOWN, 7, METHOD_BUFFERED, FILE_ANY_ACCESS) // in: VR_GET_VIRTUAL_ROOT; out: VR_GET_VIRTUAL_ROOT_RESULT
+#define IOCTL_VR_LOAD_DIFFERENCING_HIVE_FOR_HOST    CTL_CODE(FILE_DEVICE_UNKNOWN, 8, METHOD_BUFFERED, FILE_ANY_ACCESS) // in: VR_LOAD_DIFFERENCING_HIVE_FOR_HOST
+#define IOCTL_VR_UNLOAD_DIFFERENCING_HIVE_FOR_HOST  CTL_CODE(FILE_DEVICE_UNKNOWN, 9, METHOD_BUFFERED, FILE_ANY_ACCESS) // in: VR_UNLOAD_DIFFERENCING_HIVE_FOR_HOST
+
+// private
+typedef struct _VR_INITIALIZE_JOB_FOR_VREG
+{
+    HANDLE Job;
+} VR_INITIALIZE_JOB_FOR_VREG, * PVR_INITIALIZE_JOB_FOR_VREG;
+
+// rev
+#define VR_FLAG_INHERIT_TRUST_CLASS 0x00000001
+#define VR_FLAG_WRITE_THROUGH_HIVE 0x00000002 // since REDSTONE2
+#define VR_FLAG_LOCAL_MACHINE_TRUST_CLASS 0x00000004 // since 21H1
+
+// rev + private
+typedef struct _VR_LOAD_DIFFERENCING_HIVE
+{
+    HANDLE Job;
+    ULONG NextLayerIsHost;
+    ULONG Flags; // VR_FLAG_*
+    ULONG LoadFlags; // NtLoadKeyEx flags
+    WORD KeyPathLength;
+    WORD HivePathLength;
+    WORD NextLayerKeyPathLength;
+    HANDLE FileAccessToken; // since 20H1
+    WCHAR Strings[ANYSIZE_ARRAY];
+    // ...
+    // WCHAR KeyPath[1];
+    // WCHAR HivePath[1];
+    // WCHAR NextLayerKeyPath[1];
+} VR_LOAD_DIFFERENCING_HIVE, * PVR_LOAD_DIFFERENCING_HIVE;
+
+// rev + private
+typedef struct _VR_CREATE_NAMESPACE_NODE
+{
+    HANDLE Job;
+    WORD ContainerPathLength;
+    WORD HostPathLength;
+    ULONG Flags;
+    ACCESS_MASK AccessMask; // since 20H1
+    WCHAR Strings[ANYSIZE_ARRAY];
+    // ...
+    // WCHAR ContainerPath[1];
+    // WCHAR HostPath[1];
+} VR_CREATE_NAMESPACE_NODE, * PVR_CREATE_NAMESPACE_NODE;
+
+// private
+typedef struct _VR_MODIFY_FLAGS
+{
+    HANDLE Job;
+    ULONG AddFlags;
+    ULONG RemoveFlags;
+} VR_MODIFY_FLAGS, * PVR_MODIFY_FLAGS;
+
+// private
+typedef struct _NAMESPACE_NODE_DATA
+{
+    ACCESS_MASK AccessMask;
+    WORD ContainerPathLength;
+    WORD HostPathLength;
+    ULONG Flags;
+    WCHAR Strings[ANYSIZE_ARRAY];
+    // ...
+    // WCHAR ContainerPath[1];
+    // WCHAR HostPath[1];
+} NAMESPACE_NODE_DATA, * PNAMESPACE_NODE_DATA;
+
+// private
+typedef struct _VR_CREATE_MULTIPLE_NAMESPACE_NODES
+{
+    HANDLE Job;
+    ULONG NumNewKeys;
+    NAMESPACE_NODE_DATA Keys[1];
+} VR_CREATE_MULTIPLE_NAMESPACE_NODES, * PVR_CREATE_MULTIPLE_NAMESPACE_NODES;
+
+// private
+typedef struct _VR_UNLOAD_DYNAMICALLY_LOADED_HIVES
+{
+    HANDLE Job;
+} VR_UNLOAD_DYNAMICALLY_LOADED_HIVES, * PVR_UNLOAD_DYNAMICALLY_LOADED_HIVES;
+
+// rev
+#define VR_KEY_COMROOT 0          // \Registry\ComRoot\Classes
+#define VR_KEY_MACHINE_SOFTWARE 1 // \Registry\Machine\Software // since REDSTONE2
+#define VR_KEY_CONTROL_SET 2      // \Registry\Machine\System\ControlSet001 // since REDSTONE2
+
+// rev
+typedef struct _VR_GET_VIRTUAL_ROOT
+{
+    HANDLE Job;
+    ULONG Index; // VR_KEY_* // since REDSTONE2
+} VR_GET_VIRTUAL_ROOT, * PVR_GET_VIRTUAL_ROOT;
+
+// rev
+typedef struct _VR_GET_VIRTUAL_ROOT_RESULT
+{
+    HANDLE Key;
+} VR_GET_VIRTUAL_ROOT_RESULT, * PVR_GET_VIRTUAL_ROOT_RESULT;
+
+// rev
+typedef struct _VR_LOAD_DIFFERENCING_HIVE_FOR_HOST
+{
+    ULONG LoadFlags; // NtLoadKeyEx flags
+    ULONG Flags; // VR_FLAG_* // since REDSTONE2
+    WORD KeyPathLength;
+    WORD HivePathLength;
+    WORD NextLayerKeyPathLength;
+    HANDLE FileAccessToken; // since 20H1
+    WCHAR Strings[ANYSIZE_ARRAY];
+    // ...
+    // WCHAR KeyPath[1];
+    // WCHAR HivePath[1];
+    // WCHAR NextLayerKeyPath[1];
+} VR_LOAD_DIFFERENCING_HIVE_FOR_HOST, * PVR_LOAD_DIFFERENCING_HIVE_FOR_HOST;
+
+// rev
+typedef struct _VR_UNLOAD_DIFFERENCING_HIVE_FOR_HOST
+{
+    ULONG Reserved;
+    WORD TargetKeyPathLength;
+    WCHAR TargetKeyPath[ANYSIZE_ARRAY];
+} VR_UNLOAD_DIFFERENCING_HIVE_FOR_HOST, * PVR_UNLOAD_DIFFERENCING_HIVE_FOR_HOST;
 
 // System calls
 
@@ -361,7 +487,6 @@ ZwCreateKey(
     _Out_opt_ PULONG Disposition
 );
 
-#if (NTDDI_VERSION >= NTDDI_VISTA)
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -389,7 +514,6 @@ ZwCreateKeyTransacted(
     _In_ HANDLE TransactionHandle,
     _Out_opt_ PULONG Disposition
 );
-#endif
 
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
@@ -410,7 +534,6 @@ ZwOpenKey(
     _In_ POBJECT_ATTRIBUTES ObjectAttributes
 );
 
-#if (NTDDI_VERSION >= NTDDI_VISTA)
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -475,7 +598,6 @@ ZwOpenKeyTransactedEx(
     _In_ ULONG OpenOptions,
     _In_ HANDLE TransactionHandle
 );
-#endif
 
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
@@ -733,7 +855,7 @@ NTSTATUS
 NTAPI
 NtCompactKeys(
     _In_ ULONG Count,
-    _In_reads_(Count) HANDLE KeyArray[]
+    _In_reads_(Count) HANDLE* KeyArray
 );
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
@@ -742,14 +864,14 @@ NTSTATUS
 NTAPI
 ZwCompactKeys(
     _In_ ULONG Count,
-    _In_reads_(Count) HANDLE KeyArray[]
+    _In_reads_(Count) HANDLE* KeyArray
 );
 
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
 NTAPI
 NtCompressKey(
-    _In_ HANDLE Key
+    _In_ HANDLE KeyHandle
 );
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
@@ -757,7 +879,7 @@ NTSYSAPI
 NTSTATUS
 NTAPI
 ZwCompressKey(
-    _In_ HANDLE Key
+    _In_ HANDLE KeyHandle
 );
 
 __kernel_entry NTSYSCALLAPI
@@ -834,8 +956,8 @@ NtLoadKey3(
     _In_ POBJECT_ATTRIBUTES TargetKey,
     _In_ POBJECT_ATTRIBUTES SourceFile,
     _In_ ULONG Flags,
-    _In_reads_(LoadEntryCount) PKEY_LOAD_ENTRY LoadEntries,
-    _In_ ULONG LoadEntryCount,
+    _In_reads_(ExtendedParameterCount) PCM_EXTENDED_PARAMETER ExtendedParameters,
+    _In_ ULONG ExtendedParameterCount,
     _In_opt_ ACCESS_MASK DesiredAccess,
     _Out_opt_ PHANDLE RootHandle,
     _Reserved_ PVOID Reserved
@@ -849,8 +971,8 @@ ZwLoadKey3(
     _In_ POBJECT_ATTRIBUTES TargetKey,
     _In_ POBJECT_ATTRIBUTES SourceFile,
     _In_ ULONG Flags,
-    _In_reads_(LoadEntryCount) PKEY_LOAD_ENTRY LoadEntries,
-    _In_ ULONG LoadEntryCount,
+    _In_reads_(ExtendedParameterCount) PCM_EXTENDED_PARAMETER ExtendedParameters,
+    _In_ ULONG ExtendedParameterCount,
     _In_opt_ ACCESS_MASK DesiredAccess,
     _Out_opt_ PHANDLE RootHandle,
     _Reserved_ PVOID Reserved
@@ -1044,7 +1166,7 @@ NTAPI
 NtNotifyChangeMultipleKeys(
     _In_ HANDLE MasterKeyHandle,
     _In_opt_ ULONG Count,
-    _In_reads_opt_(Count) OBJECT_ATTRIBUTES SubordinateObjects[],
+    _In_reads_opt_(Count) OBJECT_ATTRIBUTES* SubordinateObjects,
     _In_opt_ HANDLE Event,
     _In_opt_ PIO_APC_ROUTINE ApcRoutine,
     _In_opt_ PVOID ApcContext,
@@ -1063,7 +1185,7 @@ NTAPI
 ZwNotifyChangeMultipleKeys(
     _In_ HANDLE MasterKeyHandle,
     _In_opt_ ULONG Count,
-    _In_reads_opt_(Count) OBJECT_ATTRIBUTES SubordinateObjects[],
+    _In_reads_opt_(Count) OBJECT_ATTRIBUTES* SubordinateObjects,
     _In_opt_ HANDLE Event,
     _In_opt_ PIO_APC_ROUTINE ApcRoutine,
     _In_opt_ PVOID ApcContext,
@@ -1160,7 +1282,6 @@ ZwLockProductActivationKeys(
     _Out_opt_ ULONG* pSafeMode
 );
 
-#if (NTDDI_VERSION >= NTDDI_VISTA)
 // private
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
@@ -1194,7 +1315,6 @@ NTAPI
 ZwThawRegistry(
     VOID
 );
-#endif
 
 #if (NTDDI_VERSION >= NTDDI_WIN10_TH2)
 __kernel_entry NTSYSCALLAPI

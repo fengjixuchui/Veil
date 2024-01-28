@@ -1,34 +1,11 @@
 /*
  * PROJECT:   Veil
- * FILE:      Veil.h
- * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
- *            samlib.dll and winsta.dll
+ * FILE:      Veil.System.Security.h
+ * PURPOSE:   This file is part of Veil.
  *
- * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
+ * LICENSE:   MIT License
  *
- * DEVELOPER: MiroKaku (50670906+MiroKaku@users.noreply.github.com)
- */
-
-/*
- * PROJECT:   Mouri's Internal NT API Collections (MINT)
- * FILE:      MINT.h
- * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
- *            samlib.dll and winsta.dll
- *
- * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
- *
- * DEVELOPER: Mouri_Naruto (Mouri_Naruto AT Outlook.com)
- */
-
-/*
- * This file is part of the Process Hacker project - https://processhacker.sf.io/
- *
- * You can redistribute this file and/or modify it under the terms of the
- * Attribution 4.0 International (CC BY 4.0) license.
- *
- * You must give appropriate credit, provide a link to the license, and
- * indicate if changes were made. You may do so in any reasonable manner, but
- * not in any way that suggests the licensor endorses you or your use.
+ * DEVELOPER: MiroKaku (kkmi04@outlook.com)
  */
 
 #pragma once
@@ -720,7 +697,6 @@ ZwImpersonateAnonymousToken(
     _In_ HANDLE ThreadHandle
 );
 
-#if (NTDDI_VERSION >= NTDDI_WIN7)
 // rev
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
@@ -747,7 +723,6 @@ ZwQuerySecurityAttributesToken(
     _In_ ULONG Length,
     _Out_ PULONG ReturnLength
 );
-#endif
 
 //
 // Access checking
@@ -856,7 +831,7 @@ ZwAccessCheckByTypeResultList(
 // Signing
 //
 
-#if (NTDDI_VERSION >= NTDDI_WIN10_RS2)
+#if (NTDDI_VERSION >= NTDDI_WIN8)
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -879,6 +854,47 @@ ZwSetCachedSigningLevel(
     _In_ ULONG SourceFileCount,
     _In_opt_ HANDLE TargetFile
 );
+
+#if (NTDDI_VERSION >= NTDDI_WIN10_RS1)
+typedef struct _SE_FILE_CACHE_CLAIM_INFORMATION
+{
+    ULONG Size;
+    PVOID Claim;
+} SE_FILE_CACHE_CLAIM_INFORMATION, *PSE_FILE_CACHE_CLAIM_INFORMATION;
+
+typedef struct _SE_SET_FILE_CACHE_INFORMATION
+{
+    ULONG Size;
+    UNICODE_STRING CatalogDirectoryPath;
+    SE_FILE_CACHE_CLAIM_INFORMATION OriginClaimInfo;
+
+} SE_SET_FILE_CACHE_INFORMATION, *PSE_SET_FILE_CACHE_INFORMATION;
+
+__kernel_entry NTSYSCALLAPI
+NTSTATUS
+NTAPI
+NtSetCachedSigningLevel2(
+    _In_ ULONG Flags,
+    _In_ SE_SIGNING_LEVEL InputSigningLevel,
+    _In_reads_(SourceFileCount) PHANDLE SourceFiles,
+    _In_ ULONG SourceFileCount,
+    _In_opt_ HANDLE TargetFile,
+    _In_opt_ SE_SET_FILE_CACHE_INFORMATION* CacheInformation
+);
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSYSAPI
+NTSTATUS
+NTAPI
+ZwSetCachedSigningLevel2(
+    _In_ ULONG Flags,
+    _In_ SE_SIGNING_LEVEL InputSigningLevel,
+    _In_reads_(SourceFileCount) PHANDLE SourceFiles,
+    _In_ ULONG SourceFileCount,
+    _In_opt_ HANDLE TargetFile,
+    _In_opt_ SE_SET_FILE_CACHE_INFORMATION* CacheInformation
+);
+#endif // (NTDDI_VERSION >= NTDDI_WIN10_RS1)
 
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
@@ -904,7 +920,9 @@ ZwGetCachedSigningLevel(
     _Inout_opt_ PULONG ThumbprintSize,
     _Out_opt_ PULONG ThumbprintAlgorithm
 );
+#endif // NTDDI_VERSION >= NTDDI_WIN8
 
+#if (NTDDI_VERSION >= NTDDI_WIN10_RS2)
 // rev
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
@@ -1238,13 +1256,11 @@ ZwPrivilegedServiceAuditAlarm(
 
 //#pragma comment(lib, "ksecdd.lib")
 
-#if (NTDDI_VERSION >= NTDDI_VISTA)
 typedef struct _LSA_LAST_INTER_LOGON_INFO {
     LARGE_INTEGER LastSuccessfulLogon;
     LARGE_INTEGER LastFailedLogon;
     ULONG FailedAttemptCountSinceLastSuccessfulLogon;
 } LSA_LAST_INTER_LOGON_INFO, * PLSA_LAST_INTER_LOGON_INFO;
-#endif // NTDDI_VERSION >= NTDDI_VISTA
 
 typedef struct _SECURITY_LOGON_SESSION_DATA {
     ULONG               Size;
@@ -1265,8 +1281,6 @@ typedef struct _SECURITY_LOGON_SESSION_DATA {
     LSA_UNICODE_STRING  DnsDomainName;
     LSA_UNICODE_STRING  Upn;
 
-#if (NTDDI_VERSION >= NTDDI_VISTA)
-
     //
     // new for LH
     //
@@ -1285,7 +1299,6 @@ typedef struct _SECURITY_LOGON_SESSION_DATA {
     LARGE_INTEGER PasswordCanChange;
     LARGE_INTEGER PasswordMustChange;
 
-#endif
 } SECURITY_LOGON_SESSION_DATA, * PSECURITY_LOGON_SESSION_DATA;
 
 NTKERNELAPI
@@ -1305,6 +1318,7 @@ LsaGetLogonSessionData(
 );
 
 FORCEINLINE
+_IRQL_requires_same_
 NTSTATUS
 NTAPI
 LsaFreeReturnBuffer(

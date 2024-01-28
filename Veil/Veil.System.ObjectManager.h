@@ -1,34 +1,11 @@
 /*
  * PROJECT:   Veil
- * FILE:      Veil.h
- * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
- *            samlib.dll and winsta.dll
+ * FILE:      Veil.System.ObjectManager.h
+ * PURPOSE:   This file is part of Veil.
  *
- * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
+ * LICENSE:   MIT License
  *
- * DEVELOPER: MiroKaku (50670906+MiroKaku@users.noreply.github.com)
- */
-
-/*
- * PROJECT:   Mouri's Internal NT API Collections (MINT)
- * FILE:      MINT.h
- * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
- *            samlib.dll and winsta.dll
- *
- * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
- *
- * DEVELOPER: Mouri_Naruto (Mouri_Naruto AT Outlook.com)
- */
-
-/*
- * This file is part of the Process Hacker project - https://processhacker.sf.io/
- *
- * You can redistribute this file and/or modify it under the terms of the
- * Attribution 4.0 International (CC BY 4.0) license.
- *
- * You must give appropriate credit, provide a link to the license, and
- * indicate if changes were made. You may do so in any reasonable manner, but
- * not in any way that suggests the licensor endorses you or your use.
+ * DEVELOPER: MiroKaku (kkmi04@outlook.com)
  */
 
 #pragma once
@@ -206,7 +183,9 @@ ZwSetInformationObject(
     _In_ ULONG ObjectInformationLength
 );
 
-#define DUPLICATE_SAME_ATTRIBUTES 0x00000004
+#define DUPLICATE_CLOSE_SOURCE      0x00000001
+#define DUPLICATE_SAME_ACCESS       0x00000002
+#define DUPLICATE_SAME_ATTRIBUTES   0x00000004
 
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
@@ -312,7 +291,7 @@ NTSTATUS
 NTAPI
 NtWaitForMultipleObjects(
     _In_ ULONG Count,
-    _In_reads_(Count) HANDLE Handles[],
+    _In_reads_(Count) HANDLE* Handles,
     _In_ WAIT_TYPE WaitType,
     _In_ BOOLEAN Alertable,
     _In_opt_ PLARGE_INTEGER Timeout
@@ -324,7 +303,7 @@ NTSTATUS
 NTAPI
 ZwWaitForMultipleObjects(
     _In_ ULONG Count,
-    _In_reads_(Count) HANDLE Handles[],
+    _In_reads_(Count) HANDLE* Handles,
     _In_ WAIT_TYPE WaitType,
     _In_ BOOLEAN Alertable,
     _In_opt_ PLARGE_INTEGER Timeout
@@ -336,7 +315,7 @@ NTSTATUS
 NTAPI
 NtWaitForMultipleObjects32(
     _In_ ULONG Count,
-    _In_reads_(Count) LONG Handles[],
+    _In_reads_(Count) LONG* Handles,
     _In_ WAIT_TYPE WaitType,
     _In_ BOOLEAN Alertable,
     _In_opt_ PLARGE_INTEGER Timeout
@@ -348,7 +327,7 @@ NTSTATUS
 NTAPI
 ZwWaitForMultipleObjects32(
     _In_ ULONG Count,
-    _In_reads_(Count) LONG Handles[],
+    _In_reads_(Count) LONG* Handles,
     _In_ WAIT_TYPE WaitType,
     _In_ BOOLEAN Alertable,
     _In_opt_ PLARGE_INTEGER Timeout
@@ -539,7 +518,6 @@ ZwQueryDirectoryObject(
 // Private namespaces
 //
 
-#if (NTDDI_VERSION >= NTDDI_VISTA)
 // private
 typedef enum _BOUNDARY_ENTRY_TYPE
 {
@@ -632,7 +610,6 @@ NTAPI
 ZwDeletePrivateNamespace(
     _In_ HANDLE NamespaceHandle
 );
-#endif
 
 //
 // Symbolic links
@@ -983,7 +960,6 @@ ObOpenObjectByPointer(
     _Out_ PHANDLE Handle
 );
 
-#if (NTDDI_VERSION >= NTDDI_WIN7)
 NTKERNELAPI
 NTSTATUS
 ObOpenObjectByPointerWithTag(
@@ -996,7 +972,6 @@ ObOpenObjectByPointerWithTag(
     _In_ ULONG Tag,
     _Out_ PHANDLE Handle
 );
-#endif
 
 NTKERNELAPI
 VOID
@@ -1068,13 +1043,11 @@ FORCEINLINE HANDLE ObMakeKernelHandle(HANDLE Handle)
     return ((HANDLE)(__int3264)((ULONG_PTR)(Handle) | KERNEL_HANDLE_BIT));
 }
 
-#if (NTDDI_VERSION >= NTDDI_VISTA)
 NTKERNELAPI
 BOOLEAN
 ObIsKernelHandle(
     _In_ HANDLE Handle
 );
-#endif // NTDDI_VERSION >= NTDDI_VISTA
 
 // begin: Object Header
 #include <pshpack8.h>
@@ -1089,7 +1062,7 @@ typedef struct _OBJECT_HEADER_CREATOR_INFO
     ULONG       Reserved2;
 #endif
 } OBJECT_HEADER_CREATOR_INFO, * POBJECT_HEADER_CREATOR_INFO;
-C_ASSERT(sizeof(OBJECT_HEADER_CREATOR_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0010 : 0x0020));
+STATIC_ASSERT(sizeof(OBJECT_HEADER_CREATOR_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0010 : 0x0020));
 
 typedef struct _OBJECT_HEADER_NAME_INFO
 {
@@ -1100,7 +1073,7 @@ typedef struct _OBJECT_HEADER_NAME_INFO
     ULONG              Reserved;
 #endif
 } OBJECT_HEADER_NAME_INFO, * POBJECT_HEADER_NAME_INFO;
-C_ASSERT(sizeof(OBJECT_HEADER_NAME_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0010 : 0x0020));
+STATIC_ASSERT(sizeof(OBJECT_HEADER_NAME_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0010 : 0x0020));
 
 typedef struct _OBJECT_HANDLE_COUNT_ENTRY
 {
@@ -1111,7 +1084,7 @@ typedef struct _OBJECT_HANDLE_COUNT_ENTRY
         ULONG LockCount : 8;
     };
 } OBJECT_HANDLE_COUNT_ENTRY, * POBJECT_HANDLE_COUNT_ENTRY;
-C_ASSERT(sizeof(OBJECT_HANDLE_COUNT_ENTRY) == (sizeof(void*) == sizeof(__int32) ? 0x0008 : 0x0010));
+STATIC_ASSERT(sizeof(OBJECT_HANDLE_COUNT_ENTRY) == (sizeof(void*) == sizeof(__int32) ? 0x0008 : 0x0010));
 
 typedef struct _OBJECT_HANDLE_COUNT_DATABASE
 {
@@ -1119,7 +1092,7 @@ typedef struct _OBJECT_HANDLE_COUNT_DATABASE
     OBJECT_HANDLE_COUNT_ENTRY HandleCountEntries[1];
 
 } OBJECT_HANDLE_COUNT_DATABASE, * POBJECT_HANDLE_COUNT_DATABASE;
-C_ASSERT(sizeof(OBJECT_HANDLE_COUNT_DATABASE) == (sizeof(void*) == sizeof(__int32) ? 0x000C : 0x0018));
+STATIC_ASSERT(sizeof(OBJECT_HANDLE_COUNT_DATABASE) == (sizeof(void*) == sizeof(__int32) ? 0x000C : 0x0018));
 
 typedef struct _OBJECT_HEADER_HANDLE_INFO
 {
@@ -1129,7 +1102,7 @@ typedef struct _OBJECT_HEADER_HANDLE_INFO
         OBJECT_HANDLE_COUNT_ENTRY      SingleEntry;
     };
 } OBJECT_HEADER_HANDLE_INFO, * POBJECT_HEADER_HANDLE_INFO;
-C_ASSERT(sizeof(OBJECT_HEADER_HANDLE_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0008 : 0x0010));
+STATIC_ASSERT(sizeof(OBJECT_HEADER_HANDLE_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0008 : 0x0010));
 
 typedef struct _OBJECT_HEADER_QUOTA_INFO
 {
@@ -1144,7 +1117,7 @@ typedef struct _OBJECT_HEADER_QUOTA_INFO
     PVOID SecurityDescriptorQuotaBlock;
 #endif
 } OBJECT_HEADER_QUOTA_INFO, * POBJECT_HEADER_QUOTA_INFO;
-C_ASSERT(sizeof(OBJECT_HEADER_QUOTA_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0010 : 0x0020));
+STATIC_ASSERT(sizeof(OBJECT_HEADER_QUOTA_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0010 : 0x0020));
 
 typedef struct _OBJECT_HEADER_PROCESS_INFO
 {
@@ -1152,7 +1125,7 @@ typedef struct _OBJECT_HEADER_PROCESS_INFO
     SIZE_T     Reserved;
 
 } OBJECT_HEADER_PROCESS_INFO, * POBJECT_HEADER_PROCESS_INFO;
-C_ASSERT(sizeof(OBJECT_HEADER_PROCESS_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0008 : 0x0010));
+STATIC_ASSERT(sizeof(OBJECT_HEADER_PROCESS_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0008 : 0x0010));
 
 typedef struct _OBJECT_HEADER_AUDIT_INFO
 {
@@ -1160,7 +1133,7 @@ typedef struct _OBJECT_HEADER_AUDIT_INFO
     SIZE_T Reserved;
 
 } OBJECT_HEADER_AUDIT_INFO, * POBJECT_HEADER_AUDIT_INFO;
-C_ASSERT(sizeof(OBJECT_HEADER_AUDIT_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0008 : 0x0010));
+STATIC_ASSERT(sizeof(OBJECT_HEADER_AUDIT_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0008 : 0x0010));
 
 typedef struct _OBJECT_HEADER_HANDLE_REVOCATION_INFO
 {
@@ -1171,7 +1144,7 @@ typedef struct _OBJECT_HEADER_HANDLE_REVOCATION_INFO
     UINT8 Padding2[4];
 #endif
 } OBJECT_HEADER_HANDLE_REVOCATION_INFO, * POBJECT_HEADER_HANDLE_REVOCATION_INFO;
-C_ASSERT(sizeof(OBJECT_HEADER_HANDLE_REVOCATION_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0010 : 0x0020));
+STATIC_ASSERT(sizeof(OBJECT_HEADER_HANDLE_REVOCATION_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0010 : 0x0020));
 
 typedef struct _OBJECT_HEADER_EXTENDED_INFO
 {
@@ -1179,14 +1152,14 @@ typedef struct _OBJECT_HEADER_EXTENDED_INFO
     SIZE_T Reserved;
 
 } OBJECT_HEADER_EXTENDED_INFO, * POBJECT_HEADER_EXTENDED_INFO;
-C_ASSERT(sizeof(OBJECT_HEADER_EXTENDED_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0008 : 0x0010));
+STATIC_ASSERT(sizeof(OBJECT_HEADER_EXTENDED_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0008 : 0x0010));
 
 typedef struct _OBJECT_HEADER_PADDING_INFO
 {
     ULONG PaddingAmount;
 
 } OBJECT_HEADER_PADDING_INFO, * POBJECT_HEADER_PADDING_INFO;
-C_ASSERT(sizeof(OBJECT_HEADER_PADDING_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0004 : 0x0004));
+STATIC_ASSERT(sizeof(OBJECT_HEADER_PADDING_INFO) == (sizeof(void*) == sizeof(__int32) ? 0x0004 : 0x0004));
 
 typedef struct _OBJECT_CREATE_INFORMATION
 {
@@ -1201,7 +1174,7 @@ typedef struct _OBJECT_CREATE_INFORMATION
     SECURITY_QUALITY_OF_SERVICE    SecurityQualityOfService;
 
 } OBJECT_CREATE_INFORMATION, * POBJECT_CREATE_INFORMATION;
-C_ASSERT(sizeof(OBJECT_CREATE_INFORMATION) == (sizeof(void*) == sizeof(__int32) ? 0x002C : 0x0040));
+STATIC_ASSERT(sizeof(OBJECT_CREATE_INFORMATION) == (sizeof(void*) == sizeof(__int32) ? 0x002C : 0x0040));
 
 typedef struct _OBJECT_HEADER
 {
@@ -1253,7 +1226,7 @@ typedef struct _OBJECT_HEADER
     QUAD Body;
 
 } OBJECT_HEADER, * POBJECT_HEADER;
-C_ASSERT(sizeof(OBJECT_HEADER) == (sizeof(void*) == sizeof(__int32) ? 0x0020 : 0x0038));
+STATIC_ASSERT(sizeof(OBJECT_HEADER) == (sizeof(void*) == sizeof(__int32) ? 0x0020 : 0x0038));
 
 #include <poppack.h>
 // end: Object Header

@@ -1,34 +1,11 @@
 /*
  * PROJECT:   Veil
- * FILE:      Veil.h
- * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
- *            samlib.dll and winsta.dll
+ * FILE:      Veil.System.MemoryManager.h
+ * PURPOSE:   This file is part of Veil.
  *
- * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
+ * LICENSE:   MIT License
  *
- * DEVELOPER: MiroKaku (50670906+MiroKaku@users.noreply.github.com)
- */
-
-/*
- * PROJECT:   Mouri's Internal NT API Collections (MINT)
- * FILE:      MINT.h
- * PURPOSE:   Definition for the Windows Internal API from ntdll.dll,
- *            samlib.dll and winsta.dll
- *
- * LICENSE:   Relicensed under The MIT License from The CC BY 4.0 License
- *
- * DEVELOPER: Mouri_Naruto (Mouri_Naruto AT Outlook.com)
- */
-
-/*
- * This file is part of the Process Hacker project - https://processhacker.sf.io/
- *
- * You can redistribute this file and/or modify it under the terms of the
- * Attribution 4.0 International (CC BY 4.0) license.
- *
- * You must give appropriate credit, provide a link to the license, and
- * indicate if changes were made. You may do so in any reasonable manner, but
- * not in any way that suggests the licensor endorses you or your use.
+ * DEVELOPER: MiroKaku (kkmi04@outlook.com)
  */
 
 #pragma once
@@ -126,15 +103,15 @@ VEIL_BEGIN()
 #ifndef _KERNEL_MODE
 typedef enum _MEMORY_INFORMATION_CLASS
 {
-    MemoryBasicInformation,                 // MEMORY_BASIC_INFORMATION
-    MemoryWorkingSetInformation,            // MEMORY_WORKING_SET_INFORMATION
-    MemoryMappedFileNameInformation,        // UNICODE_STRING
-    MemoryRegionInformation,                // MEMORY_REGION_INFORMATION
-    MemoryWorkingSetExInformation,          // MEMORY_WORKING_SET_EX_INFORMATION // since VISTA
-    MemorySharedCommitInformation,          // MEMORY_SHARED_COMMIT_INFORMATION // since WIN8
-    MemoryImageInformation,                 // MEMORY_IMAGE_INFORMATION
+    MemoryBasicInformation,                 // q: MEMORY_BASIC_INFORMATION
+    MemoryWorkingSetInformation,            // q: MEMORY_WORKING_SET_INFORMATION
+    MemoryMappedFilenameInformation,        // q: UNICODE_STRING
+    MemoryRegionInformation,                // q: MEMORY_REGION_INFORMATION
+    MemoryWorkingSetExInformation,          // q: MEMORY_WORKING_SET_EX_INFORMATION // since VISTA
+    MemorySharedCommitInformation,          // q: MEMORY_SHARED_COMMIT_INFORMATION // since WIN8
+    MemoryImageInformation,                 // q: MEMORY_IMAGE_INFORMATION
     MemoryRegionInformationEx,              // MEMORY_REGION_INFORMATION
-    MemoryPrivilegedBasicInformation,
+    MemoryPrivilegedBasicInformation,       // MEMORY_BASIC_INFORMATION
     MemoryEnclaveImageInformation,          // MEMORY_ENCLAVE_IMAGE_INFORMATION // since REDSTONE3
     MemoryBasicInformationCapped,           // 10
     MemoryPhysicalContiguityInformation,    // MEMORY_PHYSICAL_CONTIGUITY_INFORMATION // since 20H1
@@ -443,7 +420,7 @@ typedef enum _SECTION_INFORMATION_CLASS
 {
     SectionBasicInformation, // q; SECTION_BASIC_INFORMATION
     SectionImageInformation, // q; SECTION_IMAGE_INFORMATION
-    SectionRelocationInformation, // q; PVOID RelocationAddress // name:wow64:whNtQuerySection_SectionRelocationInformation // since WIN7
+    SectionRelocationInformation, // q; ULONG_PTR RelocationDelta // name:wow64:whNtQuerySection_SectionRelocationInformation // since WIN7
     SectionOriginalBaseInformation, // PVOID BaseAddress
     SectionInternalImageInformation, // SECTION_INTERNAL_IMAGE_INFORMATION // since REDSTONE2
     MaxSectionInfoClass
@@ -541,7 +518,8 @@ typedef enum _SECTION_INHERIT
 #define MEM_EXECUTE_OPTION_PERMANENT                0x8
 #define MEM_EXECUTE_OPTION_EXECUTE_DISPATCH_ENABLE  0x10
 #define MEM_EXECUTE_OPTION_IMAGE_DISPATCH_ENABLE    0x20
-#define MEM_EXECUTE_OPTION_VALID_FLAGS              0x3f
+#define MEM_EXECUTE_OPTION_DISABLE_EXCEPTION_CHAIN_VALIDATION 0x40
+#define MEM_EXECUTE_OPTION_VALID_FLAGS              0x7f
 
 //
 // Virtual memory
@@ -652,8 +630,6 @@ typedef enum _MEM_DEDICATED_ATTRIBUTE_TYPE {
     MemDedicatedAttributeMax
 } MEM_DEDICATED_ATTRIBUTE_TYPE, * PMEM_DEDICATED_ATTRIBUTE_TYPE;
 
-
-
 typedef struct _MEMORY_PARTITION_DEDICATED_MEMORY_OPEN_INFORMATION {
 
     //
@@ -677,16 +653,6 @@ typedef struct _MEMORY_PARTITION_DEDICATED_MEMORY_OPEN_INFORMATION {
     HANDLE DedicatedMemoryPartitionHandle;
 
 } MEMORY_PARTITION_DEDICATED_MEMORY_OPEN_INFORMATION, * PMEMORY_PARTITION_DEDICATED_MEMORY_OPEN_INFORMATION;
-
-#define SEC_HUGE_PAGES              0x00020000  
-#define SEC_64K_PAGES               0x00080000  
-#define SEC_FILE                    0x00800000  
-#define SEC_IMAGE                   0x01000000  
-#define SEC_RESERVE                 0x04000000  
-#define SEC_COMMIT                  0x08000000  
-#define SEC_NOCACHE                 0x10000000  
-#define SEC_LARGE_PAGES             0x80000000  
-#define SEC_IMAGE_NO_EXECUTE (SEC_IMAGE | SEC_NOCACHE)  
 
 typedef enum MEM_SECTION_EXTENDED_PARAMETER_TYPE {
     MemSectionExtendedParameterInvalidType = 0,
@@ -884,7 +850,7 @@ NtFlushVirtualMemory(
     _In_ HANDLE ProcessHandle,
     _Inout_ PVOID* BaseAddress,
     _Inout_ PSIZE_T RegionSize,
-    _Out_ struct _IO_STATUS_BLOCK* IoStatus
+    _Out_ PIO_STATUS_BLOCK IoStatus
 );
 
 _IRQL_requires_max_(APC_LEVEL)
@@ -934,7 +900,7 @@ typedef struct _MEMORY_RANGE_ENTRY
 
 #if (NTDDI_VERSION >= NTDDI_WIN10_RS2)
 
-#ifdef _KERNEL_MODE
+#if defined(_KERNEL_MODE) && !defined(_WINDOWS_)
 
 //
 // Define flags for setting process CFG valid call target entries.
@@ -1209,7 +1175,7 @@ NtMapViewOfSectionEx(
     _Inout_ PSIZE_T ViewSize,
     _In_ ULONG AllocationType,
     _In_ ULONG Win32Protect,
-    _Inout_updates_opt_(ParameterCount) PMEM_EXTENDED_PARAMETER ExtendedParameters,
+    _Inout_updates_opt_(ExtendedParameterCount) PMEM_EXTENDED_PARAMETER ExtendedParameters,
     _In_ ULONG ExtendedParameterCount
 );
 
@@ -1227,7 +1193,7 @@ ZwMapViewOfSectionEx(
     _Inout_ PSIZE_T ViewSize,
     _In_ ULONG AllocationType,
     _In_ ULONG Win32Protect,
-    _Inout_updates_opt_(ParameterCount) PMEM_EXTENDED_PARAMETER ExtendedParameters,
+    _Inout_updates_opt_(ExtendedParameterCount) PMEM_EXTENDED_PARAMETER ExtendedParameters,
     _In_ ULONG ExtendedParameterCount
 );
 #endif // NTDDI_VERSION >= NTDDI_WIN10_RS4
@@ -1458,7 +1424,7 @@ __kernel_entry NTSYSCALLAPI
 NTSTATUS
 NTAPI
 NtCreatePartition(
-    _In_ HANDLE ParentPartitionHandle,
+    _In_opt_ HANDLE ParentPartitionHandle,
     _Out_ PHANDLE PartitionHandle,
     _In_ ACCESS_MASK DesiredAccess,
     _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
@@ -1470,7 +1436,7 @@ NTSYSAPI
 NTSTATUS
 NTAPI
 ZwCreatePartition(
-    _In_ HANDLE ParentPartitionHandle,
+    _In_opt_ HANDLE ParentPartitionHandle,
     _Out_ PHANDLE PartitionHandle,
     _In_ ACCESS_MASK DesiredAccess,
     _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
@@ -1823,13 +1789,17 @@ ZwInitializeEnclave(
 
 #if (NTDDI_VERSION >= NTDDI_WIN10_RS3)
 
+#define TERMINATE_ENCLAVE_FLAG_NO_WAIT    0x00000001ul
+#define TERMINATE_ENCLAVE_FLAG_WAIT_ERROR 0x00000004ul // STATUS_PENDING -> STATUS_ENCLAVE_NOT_TERMINATED
+#define TERMINATE_ENCLAVE_VALID_FLAGS     0x00000005ul
+
 // rev
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
 NTAPI
 NtTerminateEnclave(
     _In_ PVOID BaseAddress,
-    _In_ BOOLEAN WaitForThread
+    _In_ ULONG Flags // TERMINATE_ENCLAVE_FLAG_*
 );
 
 // rev
@@ -1850,14 +1820,18 @@ typedef PENCLAVE_ROUTINE LPENCLAVE_ROUTINE;
 #endif // _KERNEL_MODE
 
 // rev
+#define ENCLAVE_CALL_VALID_FLAGS  0x00000001ul
+#define ENCLAVE_CALL_FLAG_NO_WAIT 0x00000001ul
+
+// rev
 __kernel_entry NTSYSCALLAPI
 NTSTATUS
 NTAPI
 NtCallEnclave(
     _In_ PENCLAVE_ROUTINE Routine,
-    _In_ PVOID Parameter,
-    _In_ BOOLEAN WaitForThread,
-    _Out_opt_ PVOID* ReturnValue
+    _In_ PVOID Reserved,              // reserved for dispatch (RtlEnclaveCallDispatch)
+    _In_ ULONG Flags,                 // ENCLAVE_CALL_FLAG_*
+    _Inout_ PVOID* RoutineParamReturn // input routine parameter, output routine return value
 );
 
 // rev
@@ -1867,9 +1841,9 @@ NTSTATUS
 NTAPI
 ZwCallEnclave(
     _In_ PENCLAVE_ROUTINE Routine,
-    _In_ PVOID Parameter,
-    _In_ BOOLEAN WaitForThread,
-    _Out_opt_ PVOID* ReturnValue
+    _In_ PVOID Reserved,
+    _In_ ULONG Flags,
+    _Inout_ PVOID* RoutineParamReturn
 );
 
 #endif // NTDDI_VERSION >= NTDDI_VERSION_RS3
